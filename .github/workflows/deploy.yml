@@ -1,87 +1,50 @@
-name: Deploy Full Stack
+name: Deploy Validation (No Server)
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 env:
-  # Variáveis do banco de dados (usando secrets)
-  POSTGRES_HOST: sheila_postgres  # Nome do container Docker
-  POSTGRES_PORT: 5432
-  POSTGRES_USER: postgres
-  POSTGRES_DB: connect_sphere
-  
-  # Outras configurações
-  PORT: 8200
-  DISABLE_REDIS: true
   NODE_ENV: production
 
 jobs:
-  deploy:
+  validate-deploy:
     runs-on: ubuntu-latest
-    environment: production
     
     steps:
+      # Passo 1: Checkout do código
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # Passo 2: Instalação de dependências (sem devDependencies)
       - name: Install dependencies
-        run: npm install --omit=dev
+        run: npm install --omit=dev && npm cache clean --force
 
-      - name: Build Docker image
+      # Passo 3: Build do projeto (se aplicável)
+      - name: Build application
+        run: npm run build --if-present && echo "Build completed"
+
+      # Passo 4: Teste do container Docker (sem push)
+      - name: Docker build test
         uses: docker/build-push-action@v4
         with:
           context: .
-          push: true
-          tags: |
-            sheila724/clientes-app:latest
-            sheila724/clientes-app:${{ github.sha }}
-          secrets: |
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+          load: true  # Apenas carrega localmente, não envia para registry
+          tags: local-build:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Deploy to Server
-        uses: appleboy/ssh-action@v1
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            #!/bin/bash
-            set -e
-            
-            # 1. Cria rede e volume
-            docker network create rede-da-sheila || true
-            docker volume create pgdata || true
-
-            # 2. Banco de dados PostgreSQL
-            docker run -d --name sheila_postgres \
-              --network rede-da-sheila \
-              -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
-              -e POSTGRES_USER=postgres \
-              -e POSTGRES_DB=connect_sphere \
-              -v pgdata:/var/lib/postgresql/data \
-              -p 5432:5432 \
-              postgres:17
-
-            # 3. Aplicação principal
-            docker run -d --name sheila_app \
-              --network rede-da-sheila \
-              -p 8200:8200 \
-              -e PORT=8200 \
-              -e POSTGRES_HOST=sheila_postgres \
-              -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
-              -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
-              -e NODE_ENV=production \
-              sheila724/clientes-app:latest
-
-            # 4. Health check
-            sleep 15
-            curl -f http://localhost:8200/health || exit 1
-
+      # Passo 5: Validação final
+      - name: Verify deployment package
+        run: |
+          echo "=== VALIDAÇÃO ==="
+          echo "Arquivos no diretório:"
+          ls -lh
+          echo "Variáveis de ambiente:"
+          printenv | grep -E 'NODE_ENV|POSTGRES_'
+          echo "Container construído com sucesso!"
             # Health Check
             sleep 15
             docker ps --filter "name=sheila_app" --format "{{.Status}}" | grep -q "Up" || \
