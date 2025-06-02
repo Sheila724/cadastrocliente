@@ -5,10 +5,9 @@ on:
     branches: [main]
 
 env:
+  # Variáveis de ambiente (usando secrets)
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
-  
-  # Outras configurações
   PORT: 8200
   DISABLE_REDIS: true
   NODE_ENV: production
@@ -16,32 +15,36 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: production
     
     steps:
+      # Passo 1: Checkout do código
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm install --omit=dev
+      # Passo 2: Login no Docker Hub (CORRIGIDO - usando secrets do repositório)
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}  # Secret de repositório
+          password: ${{ secrets.DOCKER_PASSWORD }}   # Token de acesso
 
-      - name: Build Docker image
+      # Passo 3: Build e push da imagem (CORRIGIDO - removido 'secrets:' desnecessário)
+      - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: |
-            sheila724/clientes-app:latest
-            sheila724/clientes-app:${{ github.sha }}
-          secrets: |
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+            sheila421/clientes-app:latest  # CORRIGIDO nome de usuário
+            sheila421/clientes-app:${{ github.sha }}
+          build-args: |  # Variáveis passadas como build-args
+            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+            SESSION_SECRET=${{ env.SESSION_SECRET }}
+            NODE_ENV=${{ env.NODE_ENV }}
 
+      # Passo 4: Deploy via SSH (CORRIGIDO - usando env corretamente)
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1
-        env:
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -64,7 +67,7 @@ jobs:
               -p 5432:5432 \
               postgres:17
 
-            # 3. Aplicação principal
+            # 3. Aplicação principal (CORRIGIDO nome da imagem)
             docker run -d --name sheila_app \
               --network rede-da-sheila \
               -p 8200:8200 \
@@ -73,7 +76,7 @@ jobs:
               -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
               -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
               -e NODE_ENV=production \
-              sheila724/clientes-app:latest
+              sheila421/clientes-app:latest  # CORRIGIDO nome de usuário
 
             # 4. Health check
             sleep 15
