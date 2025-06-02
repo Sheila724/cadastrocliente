@@ -35,7 +35,7 @@ jobs:
           context: .
           push: true
           tags: |
-            sheila421/clientes-app:latest  # CORRIGIDO nome de usuário
+            sheila421/clientes-app:latest 
             sheila421/clientes-app:${{ github.sha }}
           build-args: |  # Variáveis passadas como build-args
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
