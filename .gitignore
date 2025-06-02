@@ -1,0 +1,51 @@
+node_modules
+.env
+# Logs
+yarn-debug.log*
+yarn-error.log*
+npm-debug.log*
+logs
+*.log
+
+# Diretórios de build e cache
+coverage
+build
+dist
+.cache
+.next
+out
+
+# Banco de dados local
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+
+# VSCode
+.vscode/
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+
+# Docker
+*.pid
+docker-compose.override.yml
+
+# Outras configurações
+.idea/
+*.iml
+
+# Arquivos de seed/migration temporários
+src/db/migrations/*.js.map
+src/db/seeders/*.js.map
+
+# Arquivos de ambiente
+.env.*

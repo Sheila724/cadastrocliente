@@ -1,0 +1,73 @@
+<h1 style="text-align: center; font-size: 2.5rem; margin-bottom: 15px;">Cadastro de Cliente</h1>
+<form action="/clients/create" method="POST" style="width: 90%; margin: auto; padding: 15px; min-height: auto;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+        <div>
+            <label for="tipo" style="font-size: 1.2rem;">Tipo:</label>
+            <select id="tipo" name="tipo" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+                <option value="fisica">Física</option>
+                <option value="juridica">Jurídica</option>
+            </select>
+        </div>
+        <div>
+            <label for="cpf_cnpj" style="font-size: 1.2rem;">CPF / CNPJ:</label>
+            <input type="text" id="cpf_cnpj" name="cpf_cnpj" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="nome" style="font-size: 1.2rem;">Nome:</label>
+            <input type="text" id="nome" name="name" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="rg" style="font-size: 1.2rem;">RG / Inscrição Estadual:</label>
+            <input type="text" id="rg" name="rg" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="orgao" style="font-size: 1.2rem;">Órgão Expedidor:</label>
+            <input type="text" id="orgao" name="orgao" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="email" style="font-size: 1.2rem;">Email:</label>
+            <input type="email" id="email" name="email" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="cep" style="font-size: 1.2rem;">CEP:</label>
+            <input type="text" id="cep" name="cep" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="pais" style="font-size: 1.2rem;">País:</label>
+            <input type="text" id="pais" name="pais" value="BRASIL" readonly style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="municipio" style="font-size: 1.2rem;">Município:</label>
+            <input type="text" id="municipio" name="municipio" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="uf" style="font-size: 1.2rem;">UF:</label>
+            <input type="text" id="uf" name="uf" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="logradouro" style="font-size: 1.2rem;">Logradouro:</label>
+            <input type="text" id="logradouro" name="logradouro" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="numero" style="font-size: 1.2rem;">Número:</label>
+            <input type="text" id="numero" name="numero" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="complemento" style="font-size: 1.2rem;">Complemento:</label>
+            <input type="text" id="complemento" name="complemento" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="bairro" style="font-size: 1.2rem;">Bairro:</label>
+            <input type="text" id="bairro" name="bairro" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+        <div>
+            <label for="telefone" style="font-size: 1.2rem;">Telefone:</label>
+            <input type="text" id="telefone" name="phone" style="width: 100%; font-size: 1.2rem; padding: 8px;">
+        </div>
+
+    </div>
+    <div style="margin-top: 15px; text-align: center;">
+        <button type="submit" style="padding: 15px 30px; font-size: 1.5rem;">Confirmar</button>
+        <button type="reset" style="padding: 15px 30px; font-size: 1.5rem;">Limpar</button>
+    </div>
+</form>

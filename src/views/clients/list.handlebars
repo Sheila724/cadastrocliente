@@ -1,0 +1,29 @@
+<h1>Lista de Clientes</h1>
+<a href="/clients/create" class="btn-add">Adicionar Cliente</a>
+<table class="table-clientes">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Email</th>
+            <th>Telefone</th>
+            <th>Endereço</th>
+            <th>Ações</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each clients}}
+        <tr>
+            <td>{{this.name}}</td>
+            <td>{{this.email}}</td>
+            <td>{{this.phone}}</td>
+            <td>{{this.endereco}}</td>
+            <td>
+                <a href="/clients/edit/{{this.id}}" class="btn-sm">Editar</a>
+                <form action="/clients/delete/{{this.id}}" method="POST" style="display:inline;">
+                    <button type="submit" class="btn-sm">Excluir</button>
+                </form>
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>

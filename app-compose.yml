@@ -1,0 +1,27 @@
+# Para rodar o app, primeiro suba o banco: docker-compose -f database-compose.yml up -d
+# Depois suba o app: docker-compose -f app-compose.yml up -d --build
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: sheila_app
+    restart: unless-stopped
+    environment:
+      PORT: 8200
+      POSTGRES_HOST: sheila_postgres  # Usa o nome do container no lugar de localhost
+      POSTGRES_PORT: 5432
+      POSTGRES_PASSWORD: "@Teste123"
+      POSTGRES_USER: postgres
+      POSTGRES_NAME: connect_sphere
+      DISABLE_REDIS: true
+      SESSION_SECRET: fionastarfred
+    ports:
+      - "8320:8200" # Porta externa alterada para evitar conflitos
+    networks:
+      - rede-da-sheila
+
+networks:
+  rede-da-sheila:
+    external: true

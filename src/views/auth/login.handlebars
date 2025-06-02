@@ -1,0 +1,55 @@
+<div class="auth-container">
+    <style>
+        .auth-container {
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            padding: 40px 60px 40px 60px;
+            background-color: #f9f9f9;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .auth-container h2 {
+            color: #000;
+            font-size: 2.2rem;
+        }
+        .auth-container label {
+            font-size: 1.2rem;
+        }
+        .auth-container input[type="email"],
+        .auth-container input[type="password"] {
+            font-size: 1.2rem;
+            border: 1.5px solid #f6982d;
+            border-radius: 3px;
+            padding: 10px;
+        }
+        .auth-container input[type="submit"] {
+            font-size: 1.2rem;
+            background-color: #f6982d;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .auth-container input[type="submit"]:hover {
+            background-color: #e5871f;
+        }
+        .auth-container p, .auth-container a {
+            font-size: 1.1rem;
+        }
+    </style>
+    <h2>Entrar</h2>
+    <form action="/login" method="POST">
+        <div class="form-control">
+            <label for="email">E-mail:</label>
+            <input type="email" name="email" placeholder="Digite o seu e-mail">
+        </div>
+        <div class="form-control">
+            <label for="password">Senha:</label>
+            <input type="password" name="password" placeholder="Digite a sua senha">
+        </div>
+        <input type="submit" value="Entrar">
+        <p>Não tem conta? <a href="/register">Clique aqui</a></p>
+    </form>
+</div>

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" href="/imgs/favicon.ico" type="image/x-icon">
+    <link rel="stylesheet" href="/css/styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <title>Customer Registration</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            min-height: 100vh;
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+        #navbar {
+            width: 100vw;
+            min-width: 100vw;
+            left: 0;
+            margin: 0;
+            border-radius: 0;
+            position: relative;
+            padding: 8px 0;
+            z-index: 150;
+            box-sizing: border-box;
+            background-color: #FC9B23;
+        }
+        /* Remove fundo do ícone e mantém apenas o tamanho maior */
+        #logo {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 20px;
+            padding: 0;
+            background: none;
+            border-radius: 0;
+            box-shadow: none;
+        }
+        #logo img {
+            height: 60px;
+            width: 60px;
+            object-fit: contain;
+        }
+        .footer {
+            width: 100vw;
+            left: 0;
+            margin: 0;
+            border-radius: 0;
+            position: fixed;
+            bottom: 0;
+            background: #333;
+            color: #fff;
+            text-align: center;
+            padding: 10px 0;
+            z-index: 100;
+        }
+        .container {
+            padding-bottom: 60px;
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+    <nav id="navbar">
+        <a href="/" id="logo">
+            <img src="/imgs/cadastro.png" alt="Cadastro de Clientes">
+        </a>
+        <ul>
+            {{#if session.userid}}
+                <li>
+                    <a href="/logout">Sair</a>
+                </li>
+            {{/if}}
+        </ul>
+    </nav>
+    <div class="container">
+        {{!-- mensagens --}}
+        {{#if messages.message}}
+            <div class="message">
+                {{messages.message}}
+            </div>
+        {{/if}}
+        {{{body}}}
+    </div>
+    <div class="footer">
+        © 2025 - Todos os direitos reservados
+    </div>
+    </body>
+</html>
