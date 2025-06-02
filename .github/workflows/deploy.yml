@@ -5,7 +5,6 @@ on:
     branches: [main]
 
 env:
-  # Variáveis de ambiente (usando secrets)
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   PORT: 8200
@@ -17,38 +16,38 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      # Passo 1: Checkout do código
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Passo 2: Login no Docker Hub (CORRIGIDO - usando secrets do repositório)
+      - name: Install dependencies
+        run: npm install --omit=dev
+
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}  # Secret de repositório
-          password: ${{ secrets.DOCKER_PASSWORD }}   # Token de acesso
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # Passo 3: Build e push da imagem (CORRIGIDO - removido 'secrets:' desnecessário)
       - name: Build and push Docker image
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
           tags: |
-            sheila421/clientes-app:latest 
+            sheila421/clientes-app:latest
             sheila421/clientes-app:${{ github.sha }}
-          build-args: |  # Variáveis passadas como build-args
+          build-args: |
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
             SESSION_SECRET=${{ env.SESSION_SECRET }}
             NODE_ENV=${{ env.NODE_ENV }}
 
-      # Passo 4: Deploy via SSH (CORRIGIDO - usando env corretamente)
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
+          host: '201.23.3.86'  # IP direto ou use secrets.SSH_HOST
+          username: 'aluno'
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: '22'
           script: |
             #!/bin/bash
             set -e
@@ -67,7 +66,11 @@ jobs:
               -p 5432:5432 \
               postgres:17
 
-            # 3. Aplicação principal (CORRIGIDO nome da imagem)
+            # 3. Aplicação principal
+            docker stop sheila_app || true
+            docker rm sheila_app || true
+            docker pull sheila421/clientes-app:latest
+            
             docker run -d --name sheila_app \
               --network rede-da-sheila \
               -p 8200:8200 \
@@ -76,7 +79,7 @@ jobs:
               -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
               -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
               -e NODE_ENV=production \
-              sheila421/clientes-app:latest  # CORRIGIDO nome de usuário
+              sheila421/clientes-app:latest
 
             # 4. Health check
             sleep 15
