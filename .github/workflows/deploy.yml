@@ -5,11 +5,8 @@ on:
     branches: [main]
 
 env:
-  # Variáveis do banco de dados (usando secrets)
-  POSTGRES_HOST: sheila_postgres  # Nome do container Docker
-  POSTGRES_PORT: 5432
-  POSTGRES_USER: postgres
-  POSTGRES_DB: connect_sphere
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   
   # Outras configurações
   PORT: 8200
