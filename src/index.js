@@ -3,7 +3,7 @@ require('dotenv').config();
 const app = require('./app');
 const connection = require('./db/connection');
 
-const PORT = process.env.PORT || 8123;
+const PORT = process.env.PORT || 8212;
 
 connection
   .sync({ alter: true })

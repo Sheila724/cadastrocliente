@@ -1,83 +1,93 @@
-name: Deploy TESTWE Application
+name: Deploy Full Stack
 
 on:
   push:
-    branches: [ main ]
-  
-  pull_request:
-    types: [closed]
-    branches: [ main ]
+    branches: [main]
 
 env:
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+  PORT: 8200
+  DISABLE_REDIS: true
+  NODE_ENV: production
 
 jobs:
   deploy:
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged)
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Etapa opcional de instalação (sem testes)
       - name: Install dependencies
-        run: npm install --omit=dev && echo "Dependências instaladas (testes ignorados)"
+        run: npm install --omit=dev
 
-      - name: Docker Login
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v6
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
         with:
+          context: .
           push: true
-          tags: Sheila724/clientes-app:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: |
+            sheila421/clientes-app:latest
+            sheila421/clientes-app:${{ github.sha }}
+          build-args: |
+            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+            SESSION_SECRET=${{ env.SESSION_SECRET }}
+            NODE_ENV=${{ env.NODE_ENV }}
 
-      - name: SSH Deploy
-        uses: appleboy/ssh-action@v0.1.5
+      - name: Deploy to Server
+        uses: appleboy/ssh-action@v1
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USERNAME }}
+          host: ${{ secrets.SSH_HOST }}  # Recomendado usar secret
+          username: 'aluno'
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT || '22' }}  # Porta dinâmica ou fallback para 22
           script: |
+            #!/bin/bash
             set -e
-            set -o pipefail
             
-            # Rede e Volume
-            docker network create rede-da-sheila || true
-            docker volume create rede-da-sheila-postgres-data || true
+            # 1. Cria rede e volume (se não existirem)
+            docker network inspect rede-da-sheila >/dev/null 2>&1 || docker network create rede-da-sheila
+            docker volume inspect pgdata >/dev/null 2>&1 || docker volume create pgdata
 
-            # PostgreSQL
-            docker ps -a --filter "name=sheila_postgres" --format '{{.Names}}' | grep -q sheila_postgres || \
-              docker run --name sheila_postgres --network rede-da-sheila -p 6543:5432 \
-              -e POSTGRES_USER=postgres \
+            # 2. Banco de dados PostgreSQL (reinicia se já existir)
+            docker stop sheila_postgres || true
+            docker rm sheila_postgres || true
+            docker run -d --name sheila_postgres \
+              --network rede-da-sheila \
               -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
+              -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
-              -v rede-da-sheila-postgres-data:/var/lib/postgresql/data -d postgres:17
+              -v pgdata:/var/lib/postgresql/data \
+              -p 5432:5432 \
+              --restart unless-stopped \
+              postgres:17
 
-            # Aplicação
+            # 3. Aplicação principal (usa porta do intervalo 8212-8217)
+            APP_PORT=8212  # Primeira porta do intervalo
             docker stop sheila_app || true
             docker rm sheila_app || true
-            docker pull Sheila724/clientes-app:latest
+            docker pull sheila421/clientes-app:latest
             
-            docker run --name sheila_app --network rede-da-sheila -p 8320:8200 \
+            docker run -d --name sheila_app \
+              --network rede-da-sheila \
+              -p ${APP_PORT}:8200 \
               -e PORT=8200 \
               -e POSTGRES_HOST=sheila_postgres \
-              -e POSTGRES_PORT=5432 \
               -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
-              -e POSTGRES_USER=postgres \
-              -e POSTGRES_DB=connect_sphere \
-              -e DISABLE_REDIS=true \
               -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
-              -d Sheila724/clientes-app:latest
+              -e NODE_ENV=production \
+              --restart unless-stopped \
+              sheila421/clientes-app:latest
 
-            # Health Check
-            sleep 15
-            docker ps --filter "name=sheila_app" --format "{{.Status}}" | grep -q "Up" || \
-              (docker logs sheila_app && exit 1)
+            # 4. Health check com timeout
+            timeout 30 bash -c 'while ! curl -sSf http://localhost:${APP_PORT}/health >/dev/null; do sleep 2; done' || {
+              echo "Health check failed after 30 seconds"
+              exit 1
+            }

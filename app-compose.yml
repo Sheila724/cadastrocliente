@@ -9,7 +9,7 @@ services:
     container_name: sheila_app
     restart: unless-stopped
     environment:
-      PORT: 8200
+      PORT: 8212
       POSTGRES_HOST: sheila_postgres  # Usa o nome do container no lugar de localhost
       POSTGRES_PORT: 5432
       POSTGRES_PASSWORD: "@Teste123"
@@ -18,7 +18,7 @@ services:
       DISABLE_REDIS: true
       SESSION_SECRET: fionastarfred
     ports:
-      - "8320:8200" # Porta externa alterada para evitar conflitos
+      - "8212:8212" # Porta externa e interna ajustadas para 8212
     networks:
       - rede-da-sheila
 
