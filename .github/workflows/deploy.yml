@@ -44,19 +44,21 @@ jobs:
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1
         with:
-          host: '201.23.3.86'  # IP direto ou use secrets.SSH_HOST
+          host: ${{ secrets.SSH_HOST }}  # Recomendado usar secret
           username: 'aluno'
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          port: '22'
+          port: ${{ secrets.SSH_PORT || '22' }}  # Porta dinâmica ou fallback para 22
           script: |
             #!/bin/bash
             set -e
             
-            # 1. Cria rede e volume
-            docker network create rede-da-sheila || true
-            docker volume create pgdata || true
+            # 1. Cria rede e volume (se não existirem)
+            docker network inspect rede-da-sheila >/dev/null 2>&1 || docker network create rede-da-sheila
+            docker volume inspect pgdata >/dev/null 2>&1 || docker volume create pgdata
 
-            # 2. Banco de dados PostgreSQL
+            # 2. Banco de dados PostgreSQL (reinicia se já existir)
+            docker stop sheila_postgres || true
+            docker rm sheila_postgres || true
             docker run -d --name sheila_postgres \
               --network rede-da-sheila \
               -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
@@ -64,23 +66,28 @@ jobs:
               -e POSTGRES_DB=connect_sphere \
               -v pgdata:/var/lib/postgresql/data \
               -p 5432:5432 \
+              --restart unless-stopped \
               postgres:17
 
-            # 3. Aplicação principal
+            # 3. Aplicação principal (usa porta do intervalo 8212-8217)
+            APP_PORT=8212  # Primeira porta do intervalo
             docker stop sheila_app || true
             docker rm sheila_app || true
             docker pull sheila421/clientes-app:latest
             
             docker run -d --name sheila_app \
               --network rede-da-sheila \
-              -p 8200:8200 \
+              -p ${APP_PORT}:8200 \
               -e PORT=8200 \
               -e POSTGRES_HOST=sheila_postgres \
               -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
               -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
               -e NODE_ENV=production \
+              --restart unless-stopped \
               sheila421/clientes-app:latest
 
-            # 4. Health check
-            sleep 15
-            curl -f http://localhost:8200/health || exit 1
+            # 4. Health check com timeout
+            timeout 30 bash -c 'while ! curl -sSf http://localhost:${APP_PORT}/health >/dev/null; do sleep 2; done' || {
+              echo "Health check failed after 30 seconds"
+              exit 1
+            }
