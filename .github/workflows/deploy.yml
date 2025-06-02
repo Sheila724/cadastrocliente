@@ -2,11 +2,11 @@ name: Deploy TESTWE Application
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
+  
   pull_request:
     types: [closed]
-    branches: [main]
-    if: github.event.pull_request.merged == true
+    branches: [ main ]
 
 env:
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
@@ -16,23 +16,31 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: npm install
-      - run: npm test
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run unit tests
+        run: npm test
 
   deploy:
     needs: test
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged)
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - name: Checkout code
+        uses: actions/checkout@v4
+
       - name: Docker Login
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push
+      - name: Build and Push Docker Image
         uses: docker/build-push-action@v6
         with:
           push: true
@@ -78,8 +86,7 @@ jobs:
               -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
               -d Sheila724/clientes-app:latest
 
-            # Verifica saúde do container
-            sleep 10
+            # Health Check
+            sleep 15
             docker ps --filter "name=sheila_app" --format "{{.Status}}" | grep -q "Up" || \
               (docker logs sheila_app && exit 1)
-
