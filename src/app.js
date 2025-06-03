@@ -25,6 +25,8 @@ app.use(flash())
 app.use(express.static('src/public'))
 app.use(sessionMiddleware)
 
+app.get('/health', (req, res) => res.send('OK'));
+
 app.use('/', routes)
 
 module.exports = app
