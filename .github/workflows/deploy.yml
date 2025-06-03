@@ -33,19 +33,18 @@ jobs:
           push: true
           tags: |
             sheila421/clientes-app:latest 
-            sheila421/clientes-app:${{ github.sha }} # Tag com o SHA do commit para versionamento
-          build-args: | # Variáveis passadas para o Dockerfile durante a construção da imagem
+            sheila421/clientes-app:${{ github.sha }} 
+          build-args: | 
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
             SESSION_SECRET=${{ env.SESSION_SECRET }}
             NODE_ENV=${{ env.NODE_ENV }}
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1 # Use a v1 para ter as últimas melhorias
+        uses: appleboy/ssh-action@v1 
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # Passa todas as variáveis de ambiente definidas no 'env' global do job para o script SSH
           envs: POSTGRES_PASSWORD,SESSION_SECRET,PORT,DISABLE_REDIS,NODE_ENV 
           script: |
             #!/bin/bash
