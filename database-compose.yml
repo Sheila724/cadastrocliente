@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: "@Teste123"
       POSTGRES_DB: connect_sphere
     ports:
-      - "6543:5432" # Evita conflito com instâncias locais do Postgres
+      - "8213:5432" # Evita conflito com instâncias locais do Postgres
     networks:
       - rede-da-sheila
     volumes:
