@@ -1,9 +1,8 @@
-name: Deploy TESTWE Application
+name: Deploy Clientes Application
 
 on:
   push:
     branches: [main]
-  
   pull_request:
     types: [closed]
     branches: [main]
@@ -12,55 +11,33 @@ env:
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   NODE_ENV: production
+  PORT: 8212
+  DISABLE_REDIS: true
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: npm install
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Run unit tests
-        run: npm test
-
-  deploy:
-    needs: test
-    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install dependencies (production only)
-        run: npm install --omit=dev
-
-      - name: Docker Login
+      - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker Image
-        uses: docker/build-push-action@v4
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
         with:
-          context: .
           push: true
-          tags: Sheila724/clientes-app:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          build-args: |
-            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
-            SESSION_SECRET=${{ env.SESSION_SECRET }}
-            NODE_ENV=production
-          driver: docker-container
-          platforms: linux/amd64
+          tags: ${{ secrets.DOCKER_USERNAME }}/clientes-app:latest
 
-      - name: SSH Deploy
-        uses: appleboy/ssh-action@v1
+      - name: SSH into server and deploy
+        uses: appleboy/ssh-action@v0.1.5
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -71,43 +48,42 @@ jobs:
             set -e
             set -o pipefail
             
-            # Create network and volume if not exists
-            docker network inspect rede-da-sheila >/dev/null 2>&1 || docker network create rede-da-sheila
-            docker volume inspect rede-da-sheila-postgres-data >/dev/null 2>&1 || docker volume create rede-da-sheila-postgres-data
+            # Criar rede Docker personalizada
+            docker network create rede-da-sheila || true
 
-            # PostgreSQL container
-            if ! docker ps -a --filter "name=sheila_postgres" --format '{{.Names}}' | grep -q sheila_postgres; then
-              docker run --name sheila_postgres \
-                --network rede-da-sheila \
-                -p 5432:5432 \
-                -e POSTGRES_USER=postgres \
-                -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
-                -e POSTGRES_DB=connect_sphere \
-                -v rede-da-sheila-postgres-data:/var/lib/postgresql/data \
-                --restart unless-stopped \
-                -d postgres:17
-            fi
+            # Criar volume persistente para PostgreSQL
+            docker volume create rede-da-sheila-postgres-data || true
 
-            # Application container
-            docker stop sheila_app || true
-            docker rm sheila_app || true
-            docker pull Sheila724/clientes-app:latest
-            
-            docker run --name sheila_app \
-              --network rede-da-sheila \
-              -p 8200:8200 \
-              -e PORT=8200 \
-              -e POSTGRES_HOST=sheila_postgres \
+            # Criar e iniciar o container PostgreSQL (se não existir)
+            docker ps -a --filter "name=rede-da-sheila-postgres" --format '{{.Names}}' | grep -q rede-da-sheila-postgres || \
+              docker run --name rede-da-sheila-postgres --network rede-da-sheila -p 5432:5432 \
+              -e POSTGRES_USER=postgres \
+              -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
+              -e POSTGRES_DB=connect_sphere \
+              -v rede-da-sheila-postgres-data:/var/lib/postgresql/data \
+              -d postgres:17
+
+            # Parar e remover o container da aplicação antiga (se existir)
+            docker stop rede-da-sheila-app || true
+            docker rm rede-da-sheila-app || true
+
+            # Puxar a última imagem do Docker Hub
+            docker pull ${{ secrets.DOCKER_USERNAME }}/clientes-app:latest
+
+            # Criar e iniciar o novo container da aplicação
+            docker run --name rede-da-sheila-app --network rede-da-sheila -p 8212:8212 \
+              -e PORT=8212 \
+              -e POSTGRES_HOST=rede-da-sheila-postgres \
               -e POSTGRES_PORT=5432 \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
+              -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
               -e DISABLE_REDIS=true \
               -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
               -e NODE_ENV=production \
-              --restart unless-stopped \
-              -d Sheila724/clientes-app:latest
+              -d ${{ secrets.DOCKER_USERNAME }}/clientes-app:latest
 
-            # Health check with timeout
+            # Health check
             echo "Waiting for application to start..."
-            timeout 120 bash -c 'while ! curl -sSf http://localhost:8200/health >/dev/null; do sleep 5; echo "Retrying..."; done' || \
-              (echo "Application failed to start"; docker logs sheila_app; exit 1)
+            timeout 120 bash -c 'while ! curl -sSf http://localhost:8212/health >/dev/null; do sleep 5; echo "Retrying..."; done' || \
+              (echo "Application failed to start"; docker logs rede-da-sheila-app; exit 1)
