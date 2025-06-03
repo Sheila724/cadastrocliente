@@ -86,5 +86,6 @@ jobs:
               (echo "Application failed to start"; docker logs rede-da-sheila-app; exit 1)
 
             docker logs rede-da-sheila-app || true
+            docker logs rede-da-sheila-app
 
 
