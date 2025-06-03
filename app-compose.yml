@@ -18,7 +18,7 @@ services:
       DISABLE_REDIS: true
       SESSION_SECRET: fionastarfred
     ports:
-      - "8212:8212" # Porta externa e interna ajustadas para 8212
+      - "8213:8213" # Porta externa e interna ajustadas para 8213
     networks:
       - rede-da-sheila
 

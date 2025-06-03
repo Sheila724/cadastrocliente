@@ -10,7 +10,7 @@ services:
       POSTGRES_PASSWORD: "@Teste123"
       POSTGRES_DB: connect_sphere
     ports:
-      - "8213:5432" # Evita conflito com instâncias locais do Postgres
+      - "8214:5432" # Porta externa 8214 para o Postgres, evitando conflito com a aplicação
     networks:
       - rede-da-sheila
     volumes:

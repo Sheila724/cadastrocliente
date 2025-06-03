@@ -12,7 +12,7 @@ COPY . .
 RUN npm install
 
 # Expõe a porta (ex: 8123 — você pode trocar no docker-compose)
-EXPOSE 8212
+EXPOSE 8213
 
 # Comando para iniciar a aplicação
 CMD ["npm", "start", "start:prod"]
