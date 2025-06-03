@@ -5,7 +5,6 @@ on:
     branches: [main]
 
 env:
-  # Variáveis de ambiente que serão usadas tanto no build da imagem quanto no deploy no servidor
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   PORT: 8213
@@ -27,25 +26,24 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6 # Recomendo a v6, que é a mais recente estável
+        uses: docker/build-push-action@v6
         with:
-          context: . # Usa o Dockerfile no diretório raiz do repositório
+          context: .
           push: true
           tags: |
             sheila421/clientes-app:latest 
             sheila421/clientes-app:${{ github.sha }} 
-          build-args: | 
+          build-args: |
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
             SESSION_SECRET=${{ env.SESSION_SECRET }}
             NODE_ENV=${{ env.NODE_ENV }}
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1 
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }}
           envs: POSTGRES_PASSWORD,SESSION_SECRET,PORT,DISABLE_REDIS,NODE_ENV 
           script: |
             #!/bin/bash
@@ -72,9 +70,9 @@ jobs:
               --network rede-da-sheila \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
-              -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \ # Variável de ambiente do shell
+              -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
               -v pgdata:/var/lib/postgresql/data \
-              -p 8214:5432 \
+              -p 8214:5432 \ 
               postgres:17
             echo "PostgreSQL iniciado."
 
@@ -92,7 +90,7 @@ jobs:
               --network rede-da-sheila \
               -p 8213:8213 \
               -e PORT="${PORT}" \
-              -e POSTGRES_HOST=sheila_postgres \ # Aponta para o container do Postgres na mesma rede
+              -e POSTGRES_HOST=sheila_postgres \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
               -e SESSION_SECRET="${SESSION_SECRET}" \
               -e NODE_ENV="${NODE_ENV}" \
@@ -100,10 +98,6 @@ jobs:
               sheila421/clientes-app:latest
             echo "Container da aplicação iniciado."
             
-            # ATENÇÃO: A verificação de saúde foi removida conforme sua solicitação.
-            # O deploy será considerado bem-sucedido se todos os comandos Docker forem executados sem erro.
-            # No entanto, a aplicação pode não ter iniciado corretamente mesmo assim.
-            
             echo "Deploy finalizado. Verifique os logs da aplicação diretamente no servidor se houver problemas."
             echo "Últimos logs da aplicação 'sheila_app' para referência:"
-            docker logs sheila_app # Ainda mantém o log final para sua referência
+            docker logs sheila_app
