@@ -53,7 +53,7 @@ jobs:
 
             # Criar e iniciar o container PostgreSQL (se não existir)
             docker ps -a --filter "name=rede-da-sheila-postgres" --format '{{.Names}}' | grep -q rede-da-sheila-postgres || \
-              docker run --name rede-da-sheila-postgres --network rede-da-sheila -p 5432:5432 \
+              docker run --name rede-da-sheila-postgres --network rede-da-sheila -p 8214:5432 \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' \
               -e POSTGRES_DB=connect_sphere \
