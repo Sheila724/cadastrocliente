@@ -11,7 +11,7 @@ env:
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   NODE_ENV: production
-  PORT: 8212
+  PORT: 8213
   DISABLE_REDIS: true
 
 jobs:
@@ -71,8 +71,8 @@ jobs:
             docker pull ${{ secrets.DOCKER_USERNAME }}/clientes-app:latest
 
             # Criar e iniciar o novo container da aplicação
-            docker run --name rede-da-sheila-app --network rede-da-sheila -p 8212:8212 \
-              -e PORT=8212 \
+            docker run --name rede-da-sheila-app --network rede-da-sheila -p 8213:8213 \
+              -e PORT=8213 \
               -e POSTGRES_HOST=rede-da-sheila-postgres \
               -e POSTGRES_PORT=5432 \
               -e POSTGRES_USER=postgres \
@@ -86,5 +86,5 @@ jobs:
             # Health check
             echo "Waiting for application to start..."
             sleep 15
-            timeout 120 bash -c 'while ! curl -sSf http://localhost:8212/health >/dev/null; do sleep 5; echo "Retrying..."; done' || \
+            timeout 120 bash -c 'while ! curl -sSf http://localhost:8213/health >/dev/null; do sleep 5; echo "Retrying..."; done' || \
               (echo "Application failed to start"; docker logs rede-da-sheila-app; exit 1)
