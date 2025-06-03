@@ -58,7 +58,7 @@ jobs:
             docker ps -a --filter "name=rede-da-sheila-postgres" --format '{{.Names}}' | grep -q rede-da-sheila-postgres || \
               docker run --name rede-da-sheila-postgres --network rede-da-sheila -p 5432:5432 \
               -e POSTGRES_USER=postgres \
-              -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
+              -e POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' \
               -e POSTGRES_DB=connect_sphere \
               -v rede-da-sheila-postgres-data:/var/lib/postgresql/data \
               -d postgres:17
@@ -77,9 +77,9 @@ jobs:
               -e POSTGRES_PORT=5432 \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
-              -e POSTGRES_PASSWORD='${{ env.POSTGRES_PASSWORD }}' \
+              -e POSTGRES_PASSWORD='${{ secrets.POSTGRES_PASSWORD }}' \
               -e DISABLE_REDIS=true \
-              -e SESSION_SECRET='${{ env.SESSION_SECRET }}' \
+              -e SESSION_SECRET='${{ secrets.SESSION_SECRET }}' \
               -e NODE_ENV=production \
               -d ${{ secrets.DOCKER_USERNAME }}/clientes-app:latest
 
