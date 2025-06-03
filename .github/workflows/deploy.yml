@@ -81,7 +81,7 @@ jobs:
               -d ${{ secrets.DOCKER_USERNAME }}/clientes-app:latest
             # Health check
             echo "Waiting for application to start..."
-            sleep 15
+            sleep 50
             timeout 120 bash -c 'while ! curl -sSf http://localhost:8213/health >/dev/null; do sleep 5; echo "Retrying..."; done' || \
               (echo "Application failed to start"; docker logs rede-da-sheila-app; exit 1)
 
