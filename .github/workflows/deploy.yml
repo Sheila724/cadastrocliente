@@ -85,4 +85,3 @@ jobs:
             timeout 120 bash -c 'while ! curl -sSf http://localhost:8213/health >/dev/null; do sleep 5; echo "Retrying..."; done' || \
               (echo "Application failed to start"; docker logs rede-da-sheila-app; exit 1)
 
-#teste

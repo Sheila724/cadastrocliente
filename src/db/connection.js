@@ -7,18 +7,18 @@ if (process.env.DISABLE_DB === 'true') {
     return;
 }
 
-const password = process.env.POSTGRES_PASSWORD;
+const password = secrets.POSTGRES_PASSWORD;
 if (typeof password !== 'string') {
     throw new Error('POSTGRES_PASSWORD must be a string');
 }
 
 const sequelize = new Sequelize(
-    process.env.POSTGRES_NAME, 
-    process.env.POSTGRES_USER, 
+    secrets.POSTGRES_NAME, 
+    secrets.POSTGRES_USER, 
     password, 
     {
-        host: process.env.POSTGRES_HOST || 'localhost',
-        port: process.env.POSTGRES_PORT || 5432,
+        host: secrets.POSTGRES_HOST || 'localhost',
+        port: secrets.POSTGRES_PORT || 5432,
         dialect: 'postgres'
     }
 );
