@@ -87,7 +87,7 @@ jobs:
               --network rede-da-sheila \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
-              -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \ # Usa a variável de ambiente do shell
+              -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
