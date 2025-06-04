@@ -66,7 +66,7 @@ jobs:
 
             # 1. Criar rede Docker personalizada (se não existir)
             echo "Verificando/Criando rede Docker 'rede-da-sheila'..."
-            docker network create rede-da-sheila || true
+            docker network inspect rede-da-sheila >/dev/null 2>&1 || docker network create rede-da-sheila
 
             # 2. Criar volume persistente para PostgreSQL (se não existir)
             echo "Verificando/Criando volume Docker 'pgdata' para PostgreSQL..."
@@ -98,19 +98,22 @@ jobs:
             docker rm sheila_app || true
 
             echo "Iniciando novo container da aplicação 'sheila_app' na porta 8213 do host..."
-            docker run -d --name sheila_app \
+            # Use um formato mais robusto para o docker run
+            docker run -d \
+              --name sheila_app \
               --network rede-da-sheila \
               -p 8213:8213 \
               -e PORT="${PORT}" \
-              -e POSTGRES_HOST=sheila_postgres \ # Host interno do container PostgreSQL na rede Docker
-              -e POSTGRES_PORT=5432 \             # Porta interna do container PostgreSQL
+              -e POSTGRES_HOST=sheila_postgres \
+              -e POSTGRES_PORT=5432 \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
               -e SESSION_SECRET="${SESSION_SECRET}" \
               -e NODE_ENV="${NODE_ENV}" \
               -e DISABLE_REDIS="${DISABLE_REDIS}" \
-              sheila421/clientes-app:latest
-            echo "Container da aplicação iniciado."
-            
+              sheila421/clientes-app:latest # Esta deve ser a ULTIMA linha do comando docker run, sem '\'
+            echo "Container da aplicação iniciado." # Este echo deve estar em uma linha separada e indentado corretamente
+            echo "Aplicação disponível em http://seu-host:8213" # Opcional: Adiciona um echo mais útil
+
             echo "Deploy finalizado. Verifique os logs da aplicação diretamente no servidor se houver problemas."
             echo "Últimos logs da aplicação 'sheila_app' para referência:"
-            docker logs sheila_app # Mostra os logs da aplicação após o deploy
+            docker logs sheila_app
