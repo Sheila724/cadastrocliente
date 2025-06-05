@@ -5,8 +5,6 @@ on:
     branches: [main]
 
 env:
-  # Variáveis de ambiente globais para o job.
-  # Serão usadas no build da imagem Docker e passadas para o script de deploy SSH.
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   PORT: 8213
@@ -15,14 +13,14 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest # O runner que executará o job
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Clona o seu repositório
+        uses: actions/checkout@v4
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3 # Faz login no Docker Hub
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
@@ -30,29 +28,25 @@ jobs:
       # PASSO DE DEBUG (Última versão que funcionou e confirmou a secret)
       - name: Verify POSTGRES_PASSWORD secret
         run: |
-          # Use 'read -r' com here string para atribuir o valor da secret de forma mais robusta.
-          # Isso é muito eficaz para lidar com caracteres especiais dentro da secret.
           read -r TEMP_POSTGRES_PASSWORD <<< "${{ secrets.POSTGRES_PASSWORD }}"
-
           if [ -z "$TEMP_POSTGRES_PASSWORD" ]; then
             echo "::error::POSTGRES_PASSWORD secret está vazia ou não definida no GitHub Actions!"
             exit 1
           else
             echo "POSTGRES_PASSWORD secret parece estar definida."
-            # Usa a sintaxe do shell para obter o comprimento da string
             echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}"
           fi
-        shell: bash # Garante que o shell seja bash
+        shell: bash
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6 # Constrói e envia a imagem Docker
+        uses: docker/build-push-action@v6
         with:
-          context: . # Usa o diretório raiz do repositório como contexto para o Dockerfile
+          context: .
           push: true
-          tags: | # Define as tags para a imagem
+          tags: |
             sheila421/clientes-app:latest 
             sheila421/clientes-app:${{ github.sha }} 
-          build-args: | # Passa argumentos para o Dockerfile durante o build.
+          build-args: |
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
             SESSION_SECRET=${{ env.SESSION_SECRET }}
             NODE_ENV=${{ env.NODE_ENV }}
@@ -60,7 +54,7 @@ jobs:
             DISABLE_REDIS=${{ env.DISABLE_REDIS }}
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1 # Conecta via SSH ao servidor e executa o script
+        uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -68,8 +62,7 @@ jobs:
           # Se sua chave privada tiver uma passphrase, descomente a linha abaixo e crie a secret:
           # passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }} 
           
-          # Variáveis de ambiente do job que serão passadas para o ambiente do script SSH.
-          # Isso é mais consistente e evita ter que repetir as variáveis de novo no script.
+          # CORREÇÃO CRÍTICA AQUI: Formato da lista de ENVs
           envs: |
             POSTGRES_PASSWORD
             SESSION_SECRET
@@ -77,56 +70,49 @@ jobs:
             DISABLE_REDIS
             NODE_ENV
           
-          script: | # Início do script shell a ser executado no servidor
+          # CORREÇÃO CRÍTICA AQUI: Removendo '\' no final das linhas do script
+          script: |
             #!/bin/bash
             set -e           # Aborta o script imediatamente se um comando falhar
             set -o pipefail  # Aborta o script se um comando em um pipe falhar
 
             echo "Iniciando deploy no servidor..."
 
-            # 1. Criar rede Docker personalizada (se não existir)
             echo "Verificando/Criando rede Docker 'rede-da-sheila'..."
             docker network inspect rede-da-sheila >/dev/null 2>&1 || docker network create rede-da-sheila
 
-            # 2. Criar volume persistente para PostgreSQL (se não existir)
             echo "Verificando/Criando volume Docker 'pgdata' para PostgreSQL..."
             docker volume create pgdata || true
 
-            # 3. Gerenciar e iniciar o container PostgreSQL
             echo "Parando e removendo container PostgreSQL antigo (se existir)..."
             docker stop sheila_postgres || true
             docker rm sheila_postgres || true
 
             echo "Iniciando novo container PostgreSQL 'sheila_postgres' na porta 8214 do host..."
-            # Comando docker run do PostgreSQL (linha única para evitar erros de sintaxe)
             docker run -d --name sheila_postgres --network rede-da-sheila \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-              -e POSTGRES_HOST_AUTH_METHOD=trust \ # <<-- ADICIONADO TEMPORARIAMENTE PARA DEBUG
+              -e POSTGRES_HOST_AUTH_METHOD=trust \
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
             echo "PostgreSQL iniciado."
 
             # AGUARDANDO O POSTGRESQL (sem pg_isready)
-            # Tentará se conectar ao PostgreSQL na rede Docker via 'curl'
             echo "Aguardando o PostgreSQL ficar pronto para conexões na rede Docker (máx. 60s)..."
             timeout 60 bash -c 'until curl -sSf http://sheila_postgres:5432 >/dev/null 2>&1; do echo "PostgreSQL ainda não pronto..."; sleep 2; done' || \
               (echo "Erro: PostgreSQL não ficou pronto no tempo limite! Verifique os logs do PostgreSQL." && docker logs sheila_postgres && exit 1)
             echo "PostgreSQL está pronto para conexões."
 
-            # 4. Puxar a última imagem Docker da aplicação
             echo "Puxando a última imagem Docker da aplicação 'sheila421/clientes-app:latest'..."
             docker pull sheila421/clientes-app:latest
 
-            # 5. Gerenciar e iniciar o novo container da aplicação
             echo "Parando e removendo container da aplicação antigo (se existir)..."
             docker stop sheila_app || true
             docker rm sheila_app || true
 
             echo "Iniciando novo container da aplicação 'sheila_app' na porta 8213 do host..."
-            # Comando docker run da aplicação (linha única para evitar erros de sintaxe)
             docker run -d --name sheila_app --network rede-da-sheila \
               -p 8213:8213 \
               -e PORT="${PORT}" \
