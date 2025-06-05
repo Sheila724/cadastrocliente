@@ -5,6 +5,8 @@ on:
     branches: [main]
 
 env:
+  # Variáveis de ambiente globais para o job.
+  # Serão usadas no build da imagem Docker e passadas para o script de deploy SSH.
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   PORT: 8213
@@ -13,35 +15,19 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # O runner que executará o job
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Clona o seu repositório
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3 # Faz login no Docker Hub
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            sheila421/clientes-app:latest
-            sheila421/clientes-app:${{ github.sha }}
-          build-args: |
-            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
-            SESSION_SECRET=${{ env.SESSION_SECRET }}
-            NODE_ENV=${{ env.NODE_ENV }}
-            PORT=${{ env.PORT }}
-            DISABLE_REDIS=${{ env.DISABLE_REDIS }}
-
-      # (Opcional) Debug de secret
-      # PASSO DE DEBUG FINAL E CORRIGIDO
-      # PASSO DE DEBUG FINAL E CORRIGIDO (Mais Robusto)
+      # PASSO DE DEBUG (Última versão que funcionou e confirmou a secret)
       - name: Verify POSTGRES_PASSWORD secret
         run: |
           # Use 'read -r' com here string para atribuir o valor da secret de forma mais robusta.
@@ -58,53 +44,90 @@ jobs:
           fi
         shell: bash # Garante que o shell seja bash
 
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6 # Constrói e envia a imagem Docker
+        with:
+          context: . # Usa o diretório raiz do repositório como contexto para o Dockerfile
+          push: true
+          tags: | # Define as tags para a imagem
+            sheila421/clientes-app:latest 
+            sheila421/clientes-app:${{ github.sha }} 
+          build-args: | # Passa argumentos para o Dockerfile durante o build.
+            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
+            SESSION_SECRET=${{ env.SESSION_SECRET }}
+            NODE_ENV=${{ env.NODE_ENV }}
+            PORT=${{ env.PORT }}
+            DISABLE_REDIS=${{ env.DISABLE_REDIS }}
+
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1 # Conecta via SSH ao servidor e executa o script
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          # Se sua chave privada tiver uma passphrase, descomente a linha abaixo e crie a secret:
+          # passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }} 
+          
+          # Variáveis de ambiente do job que serão passadas para o ambiente do script SSH.
+          # Isso é mais consistente e evita ter que repetir as variáveis de novo no script.
           envs: |
             POSTGRES_PASSWORD
             SESSION_SECRET
             PORT
             DISABLE_REDIS
             NODE_ENV
-          script: |
+          
+          script: | # Início do script shell a ser executado no servidor
             #!/bin/bash
-            set -e
-            set -o pipefail
+            set -e           # Aborta o script imediatamente se um comando falhar
+            set -o pipefail  # Aborta o script se um comando em um pipe falhar
+
             echo "Iniciando deploy no servidor..."
+
+            # 1. Criar rede Docker personalizada (se não existir)
             echo "Verificando/Criando rede Docker 'rede-da-sheila'..."
             docker network inspect rede-da-sheila >/dev/null 2>&1 || docker network create rede-da-sheila
+
+            # 2. Criar volume persistente para PostgreSQL (se não existir)
             echo "Verificando/Criando volume Docker 'pgdata' para PostgreSQL..."
             docker volume create pgdata || true
+
+            # 3. Gerenciar e iniciar o container PostgreSQL
             echo "Parando e removendo container PostgreSQL antigo (se existir)..."
             docker stop sheila_postgres || true
             docker rm sheila_postgres || true
+
             echo "Iniciando novo container PostgreSQL 'sheila_postgres' na porta 8214 do host..."
-            docker run -d --name sheila_postgres \
-              --network rede-da-sheila \
+            # Comando docker run do PostgreSQL (linha única para evitar erros de sintaxe)
+            docker run -d --name sheila_postgres --network rede-da-sheila \
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+              -e POSTGRES_HOST_AUTH_METHOD=trust \ # <<-- ADICIONADO TEMPORARIAMENTE PARA DEBUG
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
             echo "PostgreSQL iniciado."
-            echo "Aguardando o PostgreSQL ficar pronto para conexões (máx. 60s)..."
-            timeout 60 bash -c 'until pg_isready -h sheila_postgres -p 5432 -U postgres; do echo "PostgreSQL ainda não pronto..."; sleep 2; done' || \
-              (echo "Erro: PostgreSQL não ficou pronto no tempo limite!" && docker logs sheila_postgres && exit 1)
+
+            # AGUARDANDO O POSTGRESQL (sem pg_isready)
+            # Tentará se conectar ao PostgreSQL na rede Docker via 'curl'
+            echo "Aguardando o PostgreSQL ficar pronto para conexões na rede Docker (máx. 60s)..."
+            timeout 60 bash -c 'until curl -sSf http://sheila_postgres:5432 >/dev/null 2>&1; do echo "PostgreSQL ainda não pronto..."; sleep 2; done' || \
+              (echo "Erro: PostgreSQL não ficou pronto no tempo limite! Verifique os logs do PostgreSQL." && docker logs sheila_postgres && exit 1)
             echo "PostgreSQL está pronto para conexões."
+
+            # 4. Puxar a última imagem Docker da aplicação
             echo "Puxando a última imagem Docker da aplicação 'sheila421/clientes-app:latest'..."
             docker pull sheila421/clientes-app:latest
+
+            # 5. Gerenciar e iniciar o novo container da aplicação
             echo "Parando e removendo container da aplicação antigo (se existir)..."
             docker stop sheila_app || true
             docker rm sheila_app || true
+
             echo "Iniciando novo container da aplicação 'sheila_app' na porta 8213 do host..."
-            docker run -d \
-              --name sheila_app \
-              --network rede-da-sheila \
+            # Comando docker run da aplicação (linha única para evitar erros de sintaxe)
+            docker run -d --name sheila_app --network rede-da-sheila \
               -p 8213:8213 \
               -e PORT="${PORT}" \
               -e POSTGRES_HOST=sheila_postgres \
@@ -115,7 +138,8 @@ jobs:
               -e DISABLE_REDIS="${DISABLE_REDIS}" \
               sheila421/clientes-app:latest
             echo "Container da aplicação iniciado."
-            echo "Aplicação disponível em http://201.23.3.86:8213 (substitua 'seu-host' pelo IP do seu servidor)."
+            
+            echo "Aplicação disponível em http://201.23.3.86:8213" # IP do seu servidor
             echo "Deploy finalizado. Verifique os logs da aplicação diretamente no servidor se houver problemas."
             echo "Últimos logs da aplicação 'sheila_app' para referência:"
             docker logs sheila_app
