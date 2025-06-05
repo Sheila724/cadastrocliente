@@ -7,7 +7,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: "@Teste123"
+      POSTGRES_PASSWORD: "321FionaStar123"
       POSTGRES_DB: connect_sphere
     ports:
       - "8214:5432" # Porta externa 8214 para o Postgres, evitando conflito com a aplicação

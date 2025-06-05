@@ -12,7 +12,7 @@ services:
       PORT: 8213
       POSTGRES_HOST: sheila_postgres  # Usa o nome do container no lugar de localhost
       POSTGRES_PORT: 5432
-      POSTGRES_PASSWORD: "@Teste123"
+      POSTGRES_PASSWORD: "321FionaStar123"
       POSTGRES_USER: postgres
       POSTGRES_NAME: connect_sphere
       DISABLE_REDIS: true
