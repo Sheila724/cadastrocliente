@@ -5,6 +5,8 @@ on:
     branches: [main]
 
 env:
+  # Variáveis de ambiente globais para o job.
+  # Serão usadas no build da imagem Docker e passadas para o script de deploy SSH.
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   PORT: 8213
@@ -13,19 +15,19 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # O runner que executará o job
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Clona o seu repositório
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3 # Faz login no Docker Hub
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # PASSO DE DEBUG (Última versão que funcionou e confirmou a secret)
+      # PASSO DE DEBUG (Opcional, pode ser removido depois de confirmar que tudo funciona)
       - name: Verify POSTGRES_PASSWORD secret
         run: |
           read -r TEMP_POSTGRES_PASSWORD <<< "${{ secrets.POSTGRES_PASSWORD }}"
@@ -39,22 +41,25 @@ jobs:
         shell: bash
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6 # Constrói e envia a imagem Docker
         with:
-          context: .
+          context: . # Usa o diretório raiz do repositório como contexto para o Dockerfile
           push: true
-          tags: |
+          tags: | # Define as tags para a imagem
             sheila421/clientes-app:latest 
             sheila421/clientes-app:${{ github.sha }} 
-          build-args: |
+          build-args: | # Passa argumentos para o Dockerfile durante o build.
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
             SESSION_SECRET=${{ env.SESSION_SECRET }}
             NODE_ENV=${{ env.NODE_ENV }}
             PORT=${{ env.PORT }}
             DISABLE_REDIS=${{ env.DISABLE_REDIS }}
+          # Otimização: Cache para o Buildx (reusa camadas de builds anteriores)
+          cache-from: type=gha # Tenta usar cache do GitHub Actions
+          cache-to: type=gha,mode=max # Escreve cache para o GitHub Actions
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1 # Conecta via SSH ao servidor e executa o script
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -62,7 +67,7 @@ jobs:
           # Se sua chave privada tiver uma passphrase, descomente a linha abaixo e crie a secret:
           # passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }} 
           
-          # CORREÇÃO CRÍTICA AQUI: Formato da lista de ENVs
+          # Variáveis de ambiente do job que serão passadas para o ambiente do script SSH.
           envs: |
             POSTGRES_PASSWORD
             SESSION_SECRET
@@ -70,7 +75,6 @@ jobs:
             DISABLE_REDIS
             NODE_ENV
           
-          # CORREÇÃO CRÍTICA AQUI: Removendo '\' no final das linhas do script
           script: |
             #!/bin/bash
             set -e           # Aborta o script imediatamente se um comando falhar
@@ -93,7 +97,7 @@ jobs:
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-              -e POSTGRES_HOST_AUTH_METHOD=trust \
+              -e POSTGRES_HOST_AUTH_METHOD=trust \ # <<-- ADICIONADO TEMPORARIAMENTE PARA DEBUG
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
@@ -129,3 +133,11 @@ jobs:
             echo "Deploy finalizado. Verifique os logs da aplicação diretamente no servidor se houver problemas."
             echo "Últimos logs da aplicação 'sheila_app' para referência:"
             docker logs sheila_app
+
+            # OTIMIZAÇÃO: Limpeza de imagens Docker não usadas no servidor (apenas as que você tem controle)
+            # Isso é mais útil se você faz muitos deploys e novas imagens são criadas
+            # ATENÇÃO: Isso pode remover imagens que você não usa mais, mas que outros alunos podem usar se o repositório for o mesmo
+            # Use com cautela em ambiente compartilhado. Se puder, faça manualmente no servidor.
+            # echo "Realizando limpeza de imagens Docker antigas e não referenciadas localmente..."
+            # docker image prune -f # Remove imagens sem tags e as que não são usadas por containers rodando
+            # docker builder prune -f # Limpa o cache de build do Docker no servidor
