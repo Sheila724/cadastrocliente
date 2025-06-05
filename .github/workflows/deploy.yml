@@ -37,11 +37,11 @@ jobs:
             sheila421/clientes-app:${{ github.sha }} 
           build-args: | # Passa argumentos para o Dockerfile durante o build.
             # Essas variáveis são as mesmas definidas em 'env' do job
-            POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
-            SESSION_SECRET=${{ env.SESSION_SECRET }}
-            NODE_ENV=${{ env.NODE_ENV }}
-            PORT=${{ env.PORT }} # Passa a porta para o build da imagem se seu Dockerfile usar ARG
-            DISABLE_REDIS=${{ env.DISABLE_REDIS }} # Passa esta variável também
+            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
+            SESSION_SECRET=${{ secrets.SESSION_SECRET }}
+            NODE_ENV=${{ secrets.NODE_ENV }}
+            PORT=${{ secrets.PORT }} # Passa a porta para o build da imagem se seu Dockerfile usar ARG
+            DISABLE_REDIS=${{ secrets.DISABLE_REDIS }} # Passa esta variável também
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1 # Conecta via SSH ao servidor e executa o script
