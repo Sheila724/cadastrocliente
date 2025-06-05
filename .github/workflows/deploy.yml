@@ -41,21 +41,22 @@ jobs:
 
       # (Opcional) Debug de secret
       # PASSO DE DEBUG FINAL E CORRIGIDO
+      # PASSO DE DEBUG FINAL E CORRIGIDO (Mais Robusto)
       - name: Verify POSTGRES_PASSWORD secret
         run: |
-          # Atribui o valor da secret a uma variável temporária do shell.
-          # Usamos printf %s para lidar melhor com caracteres especiais.
-          TEMP_POSTGRES_PASSWORD=<span class="math-inline">\(printf "%s" "</span>{{ secrets.POSTGRES_PASSWORD }}")
+          # Use 'read -r' com here string para atribuir o valor da secret de forma mais robusta.
+          # Isso é muito eficaz para lidar com caracteres especiais dentro da secret.
+          read -r TEMP_POSTGRES_PASSWORD <<< "${{ secrets.POSTGRES_PASSWORD }}"
 
           if [ -z "$TEMP_POSTGRES_PASSWORD" ]; then
             echo "::error::POSTGRES_PASSWORD secret está vazia ou não definida no GitHub Actions!"
             exit 1
           else
             echo "POSTGRES_PASSWORD secret parece estar definida."
-            # AQUI: Removida a aspas duplas extra do final da linha.
-            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}" 
+            # Usa a sintaxe do shell para obter o comprimento da string
+            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}"
           fi
-        shell: bash
+        shell: bash # Garante que o shell seja bash
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1
