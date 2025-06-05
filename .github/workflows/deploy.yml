@@ -47,7 +47,7 @@ jobs:
             exit 1
           else
             echo "POSTGRES_PASSWORD secret parece estar definida."
-            echo "Comprimento da senha: ${{ secrets.POSTGRES_PASSWORD | length }}"
+            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}""
           fi
         shell: bash
 
