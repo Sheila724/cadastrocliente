@@ -40,14 +40,20 @@ jobs:
             DISABLE_REDIS=${{ env.DISABLE_REDIS }}
 
       # (Opcional) Debug de secret
+      # PASSO DE DEBUG FINAL E CORRIGIDO
       - name: Verify POSTGRES_PASSWORD secret
         run: |
-          if [ -z "${{ secrets.POSTGRES_PASSWORD }}" ]; then
+          # Atribui o valor da secret a uma variável temporária do shell.
+          # Usamos printf %s para lidar melhor com caracteres especiais.
+          TEMP_POSTGRES_PASSWORD=<span class="math-inline">\(printf "%s" "</span>{{ secrets.POSTGRES_PASSWORD }}")
+
+          if [ -z "$TEMP_POSTGRES_PASSWORD" ]; then
             echo "::error::POSTGRES_PASSWORD secret está vazia ou não definida no GitHub Actions!"
             exit 1
           else
             echo "POSTGRES_PASSWORD secret parece estar definida."
-            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}""
+            # AQUI: Removida a aspas duplas extra do final da linha.
+            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}" 
           fi
         shell: bash
 
