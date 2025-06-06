@@ -5,6 +5,8 @@ on:
     branches: [main]
 
 env:
+  # Variáveis de ambiente globais para o job.
+  # Serão usadas no build da imagem Docker e passadas para o script de deploy SSH.
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
   PORT: 8213
@@ -13,40 +15,29 @@ env:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest # O runner que executará o job
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v4 # Clona o seu repositório
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3 # Faz login no Docker Hub
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # PASSO DE DEBUG (Última versão que funcionou e confirmou a secret)
-      - name: Verify POSTGRES_PASSWORD secret
-        run: |
-          read -r TEMP_POSTGRES_PASSWORD <<< "${{ secrets.POSTGRES_PASSWORD }}"
-          if [ -z "$TEMP_POSTGRES_PASSWORD" ]; then
-            echo "::error::POSTGRES_PASSWORD secret está vazia ou não definida no GitHub Actions!"
-            exit 1
-          else
-            echo "POSTGRES_PASSWORD secret parece estar definida."
-            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}"
-          fi
-        shell: bash
+      # PASSO DE DEBUG (REMOVIDO: Verify POSTGRES_PASSWORD secret - cumpriu sua função)
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v6 # Constrói e envia a imagem Docker
         with:
-          context: .
+          context: . # Usa o diretório raiz do repositório como contexto para o Dockerfile
           push: true
-          tags: |
+          tags: | # Define as tags para a imagem
             sheila421/clientes-app:latest 
             sheila421/clientes-app:${{ github.sha }} 
-          build-args: |
+          build-args: | # Passa argumentos para o Dockerfile durante o build.
             POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}
             SESSION_SECRET=${{ env.SESSION_SECRET }}
             NODE_ENV=${{ env.NODE_ENV }}
@@ -54,7 +45,7 @@ jobs:
             DISABLE_REDIS=${{ env.DISABLE_REDIS }}
 
       - name: Deploy to Server
-        uses: appleboy/ssh-action@v1
+        uses: appleboy/ssh-action@v1 # Conecta via SSH ao servidor e executa o script
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
@@ -62,7 +53,7 @@ jobs:
           # Se sua chave privada tiver uma passphrase, descomente a linha abaixo e crie a secret:
           # passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }} 
           
-          # CORREÇÃO CRÍTICA AQUI: Formato da lista de ENVs
+          # Variáveis de ambiente do job que serão passadas para o ambiente do script SSH.
           envs: |
             POSTGRES_PASSWORD
             SESSION_SECRET
@@ -70,7 +61,6 @@ jobs:
             DISABLE_REDIS
             NODE_ENV
           
-          # CORREÇÃO CRÍTICA AQUI: Removendo '\' no final das linhas do script
           script: |
             #!/bin/bash
             set -e           # Aborta o script imediatamente se um comando falhar
@@ -93,16 +83,16 @@ jobs:
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
+              #-e POSTGRES_HOST_AUTH_METHOD=trust \ # <<-- REMOVIDO: Linha de debug de segurança (COMENTADA)
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
             echo "PostgreSQL iniciado."
 
-            # AGUARDANDO O POSTGRESQL (sem pg_isready)
-            echo "Aguardando o PostgreSQL ficar pronto para conexões na rede Docker (máx. 60s)..."
-            timeout 60 bash -c 'until curl -sSf http://sheila_postgres:5432 >/dev/null 2>&1; do echo "PostgreSQL ainda não pronto..."; sleep 2; done' || \
-              (echo "Erro: PostgreSQL não ficou pronto no tempo limite! Verifique os logs do PostgreSQL." && docker logs sheila_postgres && exit 1)
-            echo "PostgreSQL está pronto para conexões."
+            # AGUARDANDO O POSTGRESQL (MUDANÇA: AGORA É UM SLEEP FIXO)
+            echo "Aguardando um momento para o PostgreSQL inicializar completamente (15s)..."
+            sleep 15 # Espera 15 segundos. Isso deve ser tempo suficiente para o DB iniciar.
+            echo "PostgreSQL deve estar pronto agora."
 
             echo "Puxando a última imagem Docker da aplicação 'sheila421/clientes-app:latest'..."
             docker pull sheila421/clientes-app:latest
@@ -124,7 +114,13 @@ jobs:
               sheila421/clientes-app:latest
             echo "Container da aplicação iniciado."
             
-            echo "Aplicação disponível em http://201.23.3.86:8213" # IP do seu servidor
+            echo "Aplicação disponível em http://137.184.213.189:8213" # IP do seu novo servidor
             echo "Deploy finalizado. Verifique os logs da aplicação diretamente no servidor se houver problemas."
             echo "Últimos logs da aplicação 'sheila_app' para referência:"
             docker logs sheila_app
+
+            # OTIMIZAÇÃO: Limpeza de imagens Docker não usadas no servidor (apenas as que você tem controle)
+            # Essas linhas estão comentadas e devem ser usadas com cautela, ou executadas manualmente no servidor
+            # echo "Realizando limpeza de imagens Docker antigas e não referenciadas localmente..."
+            # docker image prune -f # Remove imagens sem tags e as que não são usadas por containers rodando
+            # docker builder prune -f # Limpa o cache de build do Docker no servidor
