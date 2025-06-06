@@ -15,5 +15,5 @@ RUN npm install
 EXPOSE 8213
 
 # Comando para iniciar a aplicação
-CMD ["npm", "start", "start:prod"]
+CMD ["npm", "start"]
 
