@@ -13,7 +13,7 @@ if (typeof password !== 'string') {
 }
 
 const sequelize = new Sequelize(
-    process.env.POSTGRES_NAME, 
+    process.env.POSTGRES_DB, 
     process.env.POSTGRES_USER, 
     password, 
     {
