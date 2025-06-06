@@ -1,3 +1,5 @@
+console.log
+
 require('dotenv').config();
 
 const app = require('./app');
