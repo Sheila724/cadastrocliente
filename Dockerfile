@@ -11,9 +11,10 @@ COPY . .
 # Instala dependências
 RUN npm install
 
-# Expõe a porta (ex: 8123 — você pode trocar no docker-compose)
+# Expõe a porta
 EXPOSE 8213
 
-# Comando para iniciar a aplicação
-CMD ["npm", "start"]
+# Comando para iniciar a aplicação (CORREÇÃO AQUI)
+# Usa "exec" para substituir o shell atual pelo processo node, garantindo que as variáveis de ambiente sejam herdadas.
+CMD ["sh", "-c", "exec node src/index.js"]
 
