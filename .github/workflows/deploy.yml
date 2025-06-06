@@ -82,8 +82,8 @@ jobs:
 
             echo "Iniciando novo container PostgreSQL 'sheila_postgres' na porta 8214 do host..."
             docker run -d --name sheila_postgres --network rede-da-sheila \
-              -e POSTGRES_USER=${POSTGRES_USER} \ # Usando a variável de ambiente do job
-              -e POSTGRES_DB=${POSTGRES_DB} \     # Usando a variável de ambiente do job
+              -e POSTGRES_USER=${POSTGRES_USER} \
+              -e POSTGRES_DB=${POSTGRES_DB} \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
@@ -107,8 +107,8 @@ jobs:
               -e PORT="${PORT}" \
               -e POSTGRES_HOST=sheila_postgres \
               -e POSTGRES_PORT=5432 \
-              -e POSTGRES_USER="${POSTGRES_USER}" \ # ADICIONADO AQUI
-              -e POSTGRES_DB="${POSTGRES_DB}" \     # ADICIONADO AQUI
+              -e POSTGRES_USER="${POSTGRES_USER}" \
+              -e POSTGRES_DB="${POSTGRES_DB}" \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
               -e SESSION_SECRET="${SESSION_SECRET}" \
               -e NODE_ENV="${NODE_ENV}" \
