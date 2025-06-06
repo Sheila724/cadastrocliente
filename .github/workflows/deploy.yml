@@ -93,7 +93,6 @@ jobs:
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-              -e POSTGRES_HOST_AUTH_METHOD=trust \
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
