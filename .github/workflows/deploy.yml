@@ -11,9 +11,8 @@ env:
   PORT: 8213
   DISABLE_REDIS: true
   NODE_ENV: production
-  # ADICIONADO: Variáveis de ambiente para o PostgreSQL que sua aplicação precisa
-  POSTGRES_USER: postgres # Assumindo que o usuário é 'postgres'
-  POSTGRES_DB: connect_sphere # Assumindo o nome do DB
+  POSTGRES_USER: postgres # <<-- JÁ ESTÁ AQUI (CORRETO)
+  POSTGRES_DB: connect_sphere # <<-- JÁ ESTÁ AQUI (CORRETO)
 
 jobs:
   deploy:
@@ -29,6 +28,19 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      # PASSO DE DEBUG (Última versão que funcionou e confirmou a secret)
+      - name: Verify POSTGRES_PASSWORD secret
+        run: |
+          read -r TEMP_POSTGRES_PASSWORD <<< "${{ secrets.POSTGRES_PASSWORD }}"
+          if [ -z "$TEMP_POSTGRES_PASSWORD" ]; then
+            echo "::error::POSTGRES_PASSWORD secret está vazia ou não definida no GitHub Actions!"
+            exit 1
+          else
+            echo "POSTGRES_PASSWORD secret parece estar definida."
+            echo "Comprimento da senha: ${#TEMP_POSTGRES_PASSWORD}"
+          fi
+        shell: bash
+
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
@@ -43,8 +55,8 @@ jobs:
             NODE_ENV=${{ env.NODE_ENV }}
             PORT=${{ env.PORT }}
             DISABLE_REDIS=${{ env.DISABLE_REDIS }}
-            POSTGRES_USER=${{ env.POSTGRES_USER }} # ADICIONADO
-            POSTGRES_DB=${{ env.POSTGRES_DB }} # ADICIONADO
+            POSTGRES_USER=${{ env.POSTGRES_USER }} # <<-- JÁ ESTÁ AQUI (CORRETO)
+            POSTGRES_DB=${{ env.POSTGRES_DB }} # <<-- JÁ ESTÁ AQUI (CORRETO)
 
       - name: Deploy to Server
         uses: appleboy/ssh-action@v1
@@ -52,21 +64,23 @@ jobs:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USERNAME }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          # passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }} # Mantenha comentada se a chave não tem senha
+          # Se sua chave privada tiver uma passphrase, descomente a linha abaixo e crie a secret:
+          # passphrase: ${{ secrets.SSH_PRIVATE_KEY_PASSPHRASE }} 
           
+          # CORREÇÃO CRÍTICA AQUI: Adicionando POSTGRES_USER e POSTGRES_DB à lista 'envs'
           envs: |
             POSTGRES_PASSWORD
             SESSION_SECRET
             PORT
             DISABLE_REDIS
             NODE_ENV
-            POSTGRES_USER # ADICIONADO
-            POSTGRES_DB # ADICIONADO
+            POSTGRES_USER # <<-- ADICIONADO AQUI
+            POSTGRES_DB # <<-- ADICIONADO AQUI
           
           script: |
             #!/bin/bash
-            set -e
-            set -o pipefail
+            set -e           # Aborta o script imediatamente se um comando falhar
+            set -o pipefail  # Aborta o script se um comando em um pipe falhar
 
             echo "Iniciando deploy no servidor..."
 
