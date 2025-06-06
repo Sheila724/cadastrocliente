@@ -83,7 +83,6 @@ jobs:
               -e POSTGRES_USER=postgres \
               -e POSTGRES_DB=connect_sphere \
               -e POSTGRES_PASSWORD="${POSTGRES_PASSWORD}" \
-              #-e POSTGRES_HOST_AUTH_METHOD=trust \ # <<-- REMOVIDO: Linha de debug de segurança (COMENTADA)
               -v pgdata:/var/lib/postgresql/data \
               -p 8214:5432 \
               postgres:17
@@ -118,9 +117,3 @@ jobs:
             echo "Deploy finalizado. Verifique os logs da aplicação diretamente no servidor se houver problemas."
             echo "Últimos logs da aplicação 'sheila_app' para referência:"
             docker logs sheila_app
-
-            # OTIMIZAÇÃO: Limpeza de imagens Docker não usadas no servidor (apenas as que você tem controle)
-            # Essas linhas estão comentadas e devem ser usadas com cautela, ou executadas manualmente no servidor
-            # echo "Realizando limpeza de imagens Docker antigas e não referenciadas localmente..."
-            # docker image prune -f # Remove imagens sem tags e as que não são usadas por containers rodando
-            # docker builder prune -f # Limpa o cache de build do Docker no servidor
