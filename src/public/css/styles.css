@@ -408,12 +408,11 @@ form button {
     background-color: #da480f;
     color: white;
     padding: 6px 10px;
-    border-radius: 4px;
     font-size: 0.7rem; /* Reduz ainda mais o tamanho da fonte dos botões */
     padding: 3px 6px; /* Reduz ainda mais o espaçamento interno dos botões */
+    border-radius: 6px;
     margin-right: 5px;
     text-decoration: none;
-    border: none;
     cursor: pointer;
 }
 
@@ -453,11 +452,5 @@ form div {
 form input, form select {
     font-size: 1.2rem; /* Mantém o tamanho da fonte dos campos */
     padding: 10px; /* Aumenta o espaçamento interno dos campos */
-}
-
-form button {
-    font-size: 0.7rem; /* Reduz ainda mais o tamanho da fonte dos botões */
-    padding: 3px 6px; /* Reduz ainda mais o espaçamento interno dos botões */
-    border-radius: 6px; /* Adiciona bordas mais arredondadas */
 }
 
